@@ -1,14 +1,18 @@
 package com.zjialin.workflow.controller;
 
 import com.zjialin.workflow.utils.RestMessage;
+
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
 import io.swagger.annotations.ApiOperation;
-import lombok.extern.slf4j.Slf4j;
+
 import org.activiti.engine.impl.util.CollectionUtil;
 import org.activiti.engine.task.Task;
+import org.activiti.engine.task.TaskQuery;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -16,6 +20,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author zjialin<br>
@@ -29,17 +35,21 @@ import java.util.Map;
 @Slf4j
 public class TaskController extends BaseController {
 
-    @PostMapping(path = "findTaskByAssignee")
+    @GetMapping(path = "findTaskByAssignee")
     @ApiOperation(value = "根据流程assignee查询当前人的个人任务", notes = "根据流程assignee查询当前人的个人任务")
     @ApiImplicitParams({
             @ApiImplicitParam(name = "assignee", value = "代理人（当前用户）", dataType = "String", paramType = "query"),
     })
-    public RestMessage findTaskByAssignee(@RequestParam("assignee") String assignee) {
-        RestMessage restMessage = new RestMessage();
+    public RestMessage findTaskByAssignee(@RequestParam("assignee") String assignee,
+                                          @RequestParam("processDefinitionKey") String processDefinitionKey,
+                                          @RequestParam("page") Integer page,
+                                          @RequestParam("size") Integer size) {
+        RestMessage restMessage;
 
         try {
             //指定个人任务查询
-            List<Task> taskList = taskService.createTaskQuery().taskAssignee(assignee).list();
+            TaskQuery query = taskService.createTaskQuery().taskAssignee(assignee).processDefinitionKey(processDefinitionKey);
+            List<Task> taskList = query.listPage(page, size);
             if (CollectionUtil.isNotEmpty(taskList)) {
                 List<Map<String, String>> resultList = new ArrayList<>();
                 for (Task task : taskList) {
@@ -72,6 +82,30 @@ public class TaskController extends BaseController {
         return restMessage;
     }
 
+    @PostMapping(path = "setOwner")
+    @ApiOperation(value = "设置组长为办理人", notes = "设置组长为办理人")
+    public RestMessage setOwner(@RequestParam("processId") String processId,
+                                @RequestBody Map<String, Object> map) {
+        RestMessage restMessage;
+
+        try {
+            List<Task> taskList = taskService.createTaskQuery().processInstanceId(processId).list();
+            if (CollectionUtil.isNotEmpty(taskList)) {
+                Task task = taskList.get(0);
+                taskService.setOwner(task.getId(), (String) map.get("owner"));
+                taskService.setAssignee(task.getId(), (String) map.get("assignee"));
+                restMessage = RestMessage.success("设置成功", null);
+            } else {
+                restMessage = RestMessage.success("设置成功", null);
+            }
+        } catch (Exception e) {
+            restMessage = RestMessage.fail("设置成功", e.getMessage());
+            log.error("设置办理人,异常:{}", e);
+            return restMessage;
+        }
+        return restMessage;
+    }
+
 
     @PostMapping(path = "completeTask")
     @ApiOperation(value = "完成任务", notes = "完成任务，任务进入下一个节点")
@@ -81,7 +115,7 @@ public class TaskController extends BaseController {
     })
     public RestMessage completeTask(@RequestParam("taskId") String taskId, Map<String, Object> variables) {
 
-        RestMessage restMessage = new RestMessage();
+        RestMessage restMessage;
         try {
             taskService.complete(taskId, variables);
             restMessage = RestMessage.fail("完成任务成功", taskId);

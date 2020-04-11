@@ -1,15 +1,17 @@
 package com.zjialin.workflow.controller;
 
 import com.zjialin.workflow.utils.RestMessage;
+
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
 import io.swagger.annotations.ApiOperation;
-import lombok.extern.slf4j.Slf4j;
+
 import org.activiti.engine.impl.util.CollectionUtil;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.runtime.ProcessInstanceQuery;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -17,6 +19,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author zjialin<br>
@@ -33,17 +37,15 @@ public class StartController extends BaseController {
 
     @PostMapping(path = "start")
     @ApiOperation(value = "根据流程key启动流程", notes = "每一个流程有对应的一个key这个是某一个流程内固定的写在bpmn内的")
-    @ApiImplicitParams({
-            @ApiImplicitParam(name = "processKey", value = "流程key", dataType = "String", paramType = "query"),
-            @ApiImplicitParam(name = "startUserKey", value = "启动流程的用户", dataType = "String", paramType = "query")
-    })
-    public RestMessage start(@RequestParam("processKey") String processKey, @RequestParam("startUserKey") String startUserKey) {
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("startUserKey", startUserKey);
+    public RestMessage start(@RequestParam("processKey") String processKey,
+                             @RequestParam("tenantId") String tenantId,
+                             @RequestParam("businessKey") String businessKey,
+                             @RequestBody Map<String, Object> variables) {
         RestMessage restMessage = new RestMessage();
         ProcessInstance instance = null;
         try {
-            instance = runtimeService.startProcessInstanceByKey(processKey, variables);
+//            instance = runtimeService.startProcessInstanceByKeyAndTenantId(processKey, businessKey, variables, tenantId);
+            instance = runtimeService.startProcessInstanceByKey(processKey, businessKey, variables);
         } catch (Exception e) {
             restMessage = RestMessage.fail("启动失败", e.getMessage());
             log.error("根据流程key启动流程,异常:{}", e);
