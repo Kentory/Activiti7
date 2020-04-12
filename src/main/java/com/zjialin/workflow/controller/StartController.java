@@ -10,8 +10,10 @@ import io.swagger.annotations.ApiOperation;
 import org.activiti.engine.impl.util.CollectionUtil;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.runtime.ProcessInstanceQuery;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -32,8 +34,8 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 @Api(tags = "启动流程实例")
 @Slf4j
+@RequestMapping(value = "/v2/api", produces = MediaType.APPLICATION_JSON_VALUE)
 public class StartController extends BaseController {
-
 
     @PostMapping(path = "start")
     @ApiOperation(value = "根据流程key启动流程", notes = "每一个流程有对应的一个key这个是某一个流程内固定的写在bpmn内的")
@@ -44,8 +46,8 @@ public class StartController extends BaseController {
         RestMessage restMessage = new RestMessage();
         ProcessInstance instance = null;
         try {
-//            instance = runtimeService.startProcessInstanceByKeyAndTenantId(processKey, businessKey, variables, tenantId);
-            instance = runtimeService.startProcessInstanceByKey(processKey, businessKey, variables);
+            instance = runtimeService.startProcessInstanceByKeyAndTenantId(processKey, businessKey, variables, tenantId);
+//            instance = runtimeService.startProcessInstanceByKey(processKey, businessKey, variables);
         } catch (Exception e) {
             restMessage = RestMessage.fail("启动失败", e.getMessage());
             log.error("根据流程key启动流程,异常:{}", e);
@@ -99,7 +101,7 @@ public class StartController extends BaseController {
     @ApiImplicitParams({
             @ApiImplicitParam(name = "processId", value = "流程实例ID", dataType = "String", paramType = "query"),
     })
-    public RestMessage searchByID(@RequestParam("processId") String processId) {
+    public RestMessage searchById(@RequestParam("processId") String processId) {
         RestMessage restMessage = new RestMessage();
         ProcessInstance pi = null;
         try {

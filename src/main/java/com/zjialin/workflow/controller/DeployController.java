@@ -3,21 +3,26 @@ package com.zjialin.workflow.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zjialin.workflow.utils.RestMessage;
+
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
 import io.swagger.annotations.ApiOperation;
-import lombok.extern.slf4j.Slf4j;
+
 import org.activiti.bpmn.model.BpmnModel;
 import org.activiti.editor.language.json.converter.BpmnJsonConverter;
 import org.activiti.engine.repository.Deployment;
 import org.activiti.engine.repository.DeploymentBuilder;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author zjialin<br>
@@ -29,6 +34,7 @@ import java.util.Map;
 @RestController
 @Api(tags = "部署流程、删除流程")
 @Slf4j
+@RequestMapping(value = "/v2/api", produces = MediaType.APPLICATION_JSON_VALUE)
 public class DeployController extends BaseController {
 
 
@@ -36,10 +42,13 @@ public class DeployController extends BaseController {
     @ApiOperation(value = "根据modelId部署流程", notes = "根据modelId部署流程")
     @ApiImplicitParams({
             @ApiImplicitParam(name = "modelId", value = "设计的流程图模型ID", dataType = "String", paramType = "query"),
-            @ApiImplicitParam(name = "processName", value = "设计的流程图名称", dataType = "String", paramType = "query")
+            @ApiImplicitParam(name = "processName", value = "设计的流程图名称", dataType = "String", paramType = "query"),
+            @ApiImplicitParam(name = "tenantId", value = "tenantId", dataType = "String", paramType = "query")
 
     })
-    public RestMessage deploy(@RequestParam("modelId") String modelId, @RequestParam("processName") String processName) {
+    public RestMessage deploy(@RequestParam("modelId") String modelId,
+                              @RequestParam("processName") String processName,
+                              @RequestParam("tenantId") String tenantId) {
         RestMessage restMessage = new RestMessage();
         Deployment deployment = null;
         try {
@@ -50,6 +59,7 @@ public class DeployController extends BaseController {
             DeploymentBuilder deploymentBuilder = repositoryService.createDeployment()
                     .name("手动部署")
                     .enableDuplicateFiltering()
+                    .tenantId(tenantId)
                     .addBpmnModel(processName.concat(".bpmn20.xml"), bpmnModel);
             deployment = deploymentBuilder.deploy();
         } catch (Exception e) {

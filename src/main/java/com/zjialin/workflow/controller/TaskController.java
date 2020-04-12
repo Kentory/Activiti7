@@ -8,11 +8,14 @@ import io.swagger.annotations.ApiImplicitParams;
 import io.swagger.annotations.ApiOperation;
 
 import org.activiti.engine.impl.util.CollectionUtil;
+import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.task.Task;
 import org.activiti.engine.task.TaskQuery;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -20,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -31,6 +35,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 
 @RestController
+@RequestMapping(value = "/v2/api", produces = MediaType.APPLICATION_JSON_VALUE)
 @Api(tags = "任务相关接口")
 @Slf4j
 public class TaskController extends BaseController {
@@ -50,6 +55,12 @@ public class TaskController extends BaseController {
             //指定个人任务查询
             TaskQuery query = taskService.createTaskQuery().taskAssignee(assignee).processDefinitionKey(processDefinitionKey);
             List<Task> taskList = query.listPage(page, size);
+            Long count = query.count();
+
+//            TaskPageVO result = new TaskPageVO();
+//            result.setTasks(taskList);
+//            result.setCount(count);
+//            restMessage = RestMessage.success("查询成功", result);
             if (CollectionUtil.isNotEmpty(taskList)) {
                 List<Map<String, String>> resultList = new ArrayList<>();
                 for (Task task : taskList) {
@@ -68,9 +79,19 @@ public class TaskController extends BaseController {
                     resultMap.put("executionId", task.getExecutionId());
                     /* 流程定义ID */
                     resultMap.put("processDefinitionId", task.getProcessDefinitionId());
+//                    resultMap.put("businessKey", task.get)
+                    ProcessInstance processInstance = runtimeService.createProcessInstanceQuery().processInstanceId(task.getProcessInstanceId()).singleResult();
+                    if (Objects.nonNull(processInstance)) {
+                        resultMap.put("businessKey", processInstance.getBusinessKey());
+                    }
                     resultList.add(resultMap);
                 }
-                restMessage = RestMessage.success("查询成功", resultList);
+//                restMessage = RestMessage.success("查询成功", resultList);
+                Map<String, Object> result = new HashMap<>();
+                result.put("list", resultList);
+                result.put("total", count);
+                restMessage = RestMessage.success("查询成功", result);
+
             } else {
                 restMessage = RestMessage.success("查询成功", null);
             }
@@ -109,15 +130,13 @@ public class TaskController extends BaseController {
 
     @PostMapping(path = "completeTask")
     @ApiOperation(value = "完成任务", notes = "完成任务，任务进入下一个节点")
-    @ApiImplicitParams({
-            @ApiImplicitParam(name = "taskId", value = "任务ID", dataType = "String", paramType = "query"),
-            @ApiImplicitParam(name = "variables", value = "填充参数", dataType = "body", paramType = "query"),
-    })
-    public RestMessage completeTask(@RequestParam("taskId") String taskId, Map<String, Object> variables) {
+    public RestMessage completeTask(@RequestParam("taskId") String taskId, @RequestBody Map<String, Object> variables) {
 
         RestMessage restMessage;
         try {
+            Task task = taskService.createTaskQuery().taskId(taskId).singleResult();
             taskService.complete(taskId, variables);
+            ProcessInstance processInstance = runtimeService.createProcessInstanceQuery().processInstanceId(task.getProcessInstanceId()).singleResult();
             restMessage = RestMessage.fail("完成任务成功", taskId);
         } catch (Exception e) {
             restMessage = RestMessage.fail("完成任务失败", e.getMessage());
